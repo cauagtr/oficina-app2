@@ -325,7 +325,7 @@ function setTopbar(titulo, sub, acoes){
 }
 
 var OS={};
-function resetOS(){ OS={clienteId:'',clienteNome:'',clienteTel:'',clienteCPF:'',veiculoId:'',veiculoPlaca:'',veiculoModelo:'',km:'',previsao:'',descricao:'',checklist:{},itens:[],desconto:0}; }
+function resetOS(){ OS={clienteId:'',clienteNome:'',clienteTel:'',clienteCPF:'',veiculoId:'',veiculoPlaca:'',veiculoModelo:'',km:'',previsao:'',descricao:'',checklist:{},itens:[],desconto:0,fotos:[]}; }
 resetOS();
 
 // BUSCAR
@@ -386,10 +386,32 @@ var ITENS_CHECK=['Motor','Cambio','Freios','Pneus','Luzes','Ar condicionado','Si
 function pgNovaOS2(el){
   setTopbar('Inspecao Visual','Passo 2 de 4');
   var itensHtml=ITENS_CHECK.map(function(item){ var atual=OS.checklist[item]||''; var id='ci-'+item.replace(/[\s\/]/g,'_'); return '<div class="check-item '+atual+'" id="'+id+'"><div class="check-label">'+item+'</div><div class="check-btns"><button class="check-btn '+(atual==='ok'?'ok':'')+'" onclick="setCheck(\''+item+'\',\'ok\',this)">OK</button><button class="check-btn '+(atual==='atencao'?'atencao':'')+'" onclick="setCheck(\''+item+'\',\'atencao\',this)">&#9888;</button><button class="check-btn '+(atual==='critico'?'critico':'')+'" onclick="setCheck(\''+item+'\',\'critico\',this)">&#10005;</button></div></div>'; }).join('');
-  el.innerHTML='<div style="padding:1rem"><div class="steps"><div class="step-dot done"></div><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div><div class="step-label">Marque o estado de cada item</div>'+itensHtml+'<div class="form-group" style="margin-top:1rem"><label>Foto da inspecao (opcional)</label><input type="file" accept="image/*" capture="environment" onchange="guardarFoto(this)"></div><button class="btn btn-primary btn-full btn-lg" style="margin-top:.5rem" onclick="avancar2()">Proximo &mdash; Servicos e Pecas</button></div>';
+  el.innerHTML='<div style="padding:1rem"><div class="steps"><div class="step-dot done"></div><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div><div class="step-label">Marque o estado de cada item</div>'+itensHtml+'<div class="form-group" style="margin-top:1rem"><label style="display:block;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.38rem">Fotos do Diagnostico (opcional)</label><input type="file" accept="image/*" capture="environment" multiple onchange="guardarFotos(this)"><div style="font-size:.68rem;color:var(--muted);margin-top:.25rem">Tire fotos do problema para registrar o diagnotico</div><div id="fotos-preview" style="display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.5rem"></div></div><button class="btn btn-primary btn-full btn-lg" style="margin-top:.5rem" onclick="avancar2()">Proximo &mdash; Servicos e Pecas</button></div>';
 }
 function setCheck(item,status,btn){ OS.checklist[item]=status; var id='ci-'+item.replace(/[\s\/]/g,'_'); var card=document.getElementById(id); if(card) card.className='check-item '+status; var btns=btn.closest('.check-btns').querySelectorAll('.check-btn'); btns.forEach(function(b){ b.classList.remove('ok','atencao','critico'); }); btn.classList.add(status); }
-function guardarFoto(input){ var file=input.files[0]; if(!file) return; var reader=new FileReader(); reader.onload=function(e){ OS.foto=e.target.result; toast('Foto registrada!'); }; reader.readAsDataURL(file); }
+function guardarFotos(input){
+  var files=[].slice.call(input.files);
+  if(!files.length) return;
+  OS.fotos=[];
+  var preview=document.getElementById('fotos-preview');
+  if(preview) preview.innerHTML='';
+  var processados=0;
+  files.forEach(function(file){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      OS.fotos.push({base64:e.target.result.split(',')[1],nome:file.name,tipo:file.type});
+      if(preview){
+        var img=document.createElement('img');
+        img.src=e.target.result;
+        img.style.cssText='width:64px;height:64px;object-fit:cover;border-radius:.4rem;border:1.5px solid var(--border)';
+        preview.appendChild(img);
+      }
+      processados++;
+      if(processados===files.length) toast(files.length+' foto(s) registrada(s)!');
+    };
+    reader.readAsDataURL(file);
+  });
+}
 function avancar2(){ var sem=ITENS_CHECK.filter(function(i){ return !OS.checklist[i]; }); if(sem.length>0){ toast('Marque todos os itens ('+sem.length+' pendentes)','error'); return; } App.go('nova-os-3'); }
 
 // NOVA OS P3
@@ -409,13 +431,22 @@ function renderItens(){
 }
 function addItem(tipo){
   var pecaOpts=_estoqueProdutos.length?'<label style="display:block;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.38rem">Peca do Estoque</label><select id="mi-peca-sel" onchange="autoFillPeca(this)" style="width:100%;padding:.65rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.9rem;font-family:inherit;margin-bottom:.5rem"><option value="">Selecionar do estoque...</option>'+_estoqueProdutos.map(function(p){ return '<option value="'+esc(p.nome)+'" data-val="'+p.valor_venda+'">'+p.nome+' ('+p.quantidade+' disp.)</option>'; }).join('')+'</select>':'';
-  var corpoPeca='<div class="form-group">'+pecaOpts+'<label style="display:block;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.38rem">Nome da Peca *</label><input type="text" id="mi-desc" placeholder="Nome da peca" style="width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div>';
+  var corpoPeca='<div class="form-group">'+pecaOpts+'<label style="display:block;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.38rem">Nome da Peca *</label><input type="text" id="mi-desc" placeholder="Nome da peca" style="width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div><div class="form-group"><label style="display:block;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.38rem">Tipo da Peca *</label><select id="mi-tipopeca" style="width:100%;padding:.65rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.9rem;font-family:inherit"><option value="original">Original</option><option value="paralela">Paralela</option><option value="recondicionada">Recondicionada</option></select></div>';
   var corpoSvc='<div class="form-group"><label style="display:block;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.38rem">Descricao do Servico *</label><input type="text" id="mi-desc" placeholder="Nome do servico" style="width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div>';
   abrirModal('Adicionar '+(tipo==='servico'?'Servico':'Peca'),(tipo==='peca'?corpoPeca:corpoSvc)+'<div class="form-2col"><div class="form-group"><label style="display:block;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.38rem">Quantidade</label><input type="number" id="mi-qtd" value="1" min="0.01" step="0.01" inputmode="decimal" style="width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div><div class="form-group"><label style="display:block;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.38rem">Valor Unit. R$</label><input type="number" id="mi-unit" value="0" min="0" step="0.01" inputmode="decimal" style="width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div></div>','<button class="btn btn-secondary btn-full" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary btn-full" onclick="confirmarItem(\''+tipo+'\')">Adicionar</button>');
   setTimeout(function(){ var d=document.getElementById('mi-desc'); if(d) d.focus(); },200);
 }
 function autoFillPeca(sel){ var opt=sel.options[sel.selectedIndex]; var nome=opt.value; var val=opt.dataset.val; var d=document.getElementById('mi-desc'); if(d) d.value=nome; var u=document.getElementById('mi-unit'); if(u&&val) u.value=val; }
-function confirmarItem(tipo){ var desc=(document.getElementById('mi-desc').value||'').trim(); var qtd=parseFloat(document.getElementById('mi-qtd').value)||1; var unit=parseFloat(document.getElementById('mi-unit').value)||0; if(!desc){ toast('Preencha a descricao','error'); return; } OS.itens.push({tipo:tipo,descricao:desc,quantidade:qtd,valor_unitario:unit,valor_total:qtd*unit}); fecharModal(); renderItens(); calcTotal(); }
+function confirmarItem(tipo){
+  var desc=(document.getElementById('mi-desc').value||'').trim();
+  var qtd=parseFloat(document.getElementById('mi-qtd').value)||1;
+  var unit=parseFloat(document.getElementById('mi-unit').value)||0;
+  var tipoPeca=tipo==='peca'?(document.getElementById('mi-tipopeca')?document.getElementById('mi-tipopeca').value:null):null;
+  if(!desc){ toast('Preencha a descricao','error'); return; }
+  if(tipo==='peca'&&!tipoPeca){ toast('Selecione o tipo da peca','error'); return; }
+  OS.itens.push({tipo:tipo,descricao:desc,quantidade:qtd,valor_unitario:unit,valor_total:qtd*unit,tipo_peca:tipoPeca||null});
+  fecharModal(); renderItens(); calcTotal();
+}
 function removeItem(i){ OS.itens.splice(i,1); renderItens(); calcTotal(); }
 function calcTotal(){ var svcs=0,pecs=0; OS.itens.forEach(function(it){ if(it.tipo==='servico') svcs+=it.valor_total; else pecs+=it.valor_total; }); var desc=parseFloat((document.getElementById('os-desconto')||{}).value||0)||0; var s=document.getElementById('sub-svc'); if(s) s.textContent=brl(svcs); var p=document.getElementById('sub-pec'); if(p) p.textContent=brl(pecs); var t=document.getElementById('total-final'); if(t) t.textContent=brl(svcs+pecs-desc); }
 function avancar3(){ OS.desconto=parseFloat(document.getElementById('os-desconto').value)||0; App.go('nova-os-4'); }
@@ -434,11 +465,13 @@ function salvarOS(){
   var btn=document.getElementById('btn-salvar-os'); if(btn){ btn.textContent='Salvando...'; btn.disabled=true; }
   var svcs=0,pecs=0; OS.itens.forEach(function(it){ if(it.tipo==='servico') svcs+=it.valor_total; else pecs+=it.valor_total; });
   var total=svcs+pecs-(OS.desconto||0); var numero=numOS();
-  sb().from('ordens_servico').insert({numero:numero,cliente_id:OS.clienteId,veiculo_id:OS.veiculoId,descricao:OS.descricao,data_previsao:OS.previsao||null,quilometragem_entrada:OS.km||null,valor_servicos:svcs,valor_pecas:pecs,desconto:OS.desconto||0,valor_total:total,status:'na_fila',checklist_inspecao:OS.checklist,mecanico_id:_funcId||null}).select().single().then(function(res){
+  sb().from('ordens_servico').insert({numero:numero,cliente_id:OS.clienteId,veiculo_id:OS.veiculoId,descricao:OS.descricao,data_previsao:OS.previsao||null,quilometragem_entrada:OS.km||null,valor_servicos:svcs,valor_pecas:pecs,desconto:OS.desconto||0,valor_total:total,status:'na_fila',prioridade:'normal',garantia_dias:90,aprovacao_status:'pendente',checklist_inspecao:OS.checklist,mecanico_id:_funcId||null}).select().single().then(function(res){
     if(res.error){ toast('Erro: '+res.error.message,'error'); if(btn){ btn.textContent='Abrir Ordem de Servico'; btn.disabled=false; } return; }
     var osData=res.data;
-    var inserts=OS.itens.map(function(it){ return {os_id:osData.id,tipo:it.tipo,descricao:it.descricao,quantidade:it.quantidade,valor_unitario:it.valor_unitario,valor_total:it.valor_total}; });
+    var inserts=OS.itens.map(function(it){ return {os_id:osData.id,tipo:it.tipo,descricao:it.descricao,quantidade:it.quantidade,valor_unitario:it.valor_unitario,valor_total:it.valor_total,tipo_peca:it.tipo_peca||null}; });
     var pIns=inserts.length>0?sb().from('os_itens').insert(inserts):Promise.resolve({});
+    // Log status inicial
+    sb().from('os_status_log').insert({os_id:osData.id,status:'na_fila'});
     pIns.then(function(){
       sb().from('clientes').select('total_gasto').eq('id',OS.clienteId).single().then(function(rc){
         var antigo=rc.data?Number(rc.data.total_gasto)||0:0;
