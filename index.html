@@ -863,35 +863,88 @@ function confirmarEntrada(){
 }
 
 // CADASTRO CLIENTE
+function maskCPF2(inp){
+  var v=inp.value.replace(/\D/g,'');
+  v=v.replace(/(\d{3})(\d)/,'$1.$2');
+  v=v.replace(/(\d{3})(\d)/,'$1.$2');
+  v=v.replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+  inp.value=v;
+}
+function maskTel2(inp){
+  var v=inp.value.replace(/\D/g,'');
+  v=v.replace(/^(\d{2})(\d)/,'($1) $2');
+  v=v.replace(/(\d{5})(\d)/,'$1-$2');
+  inp.value=v.substring(0,15);
+}
+function validarCPF2(cpf){
+  var c=cpf.replace(/\D/g,'');
+  if(c.length!==11) return false;
+  var inv=['00000000000','11111111111','22222222222','33333333333','44444444444','55555555555','66666666666','77777777777','88888888888','99999999999'];
+  if(inv.indexOf(c)>=0) return false;
+  var s=0; for(var i=0;i<9;i++) s+=parseInt(c[i])*(10-i); var r=11-(s%11); if(r>=10)r=0; if(r!==parseInt(c[9])) return false;
+  s=0; for(var i=0;i<10;i++) s+=parseInt(c[i])*(11-i); r=11-(s%11); if(r>=10)r=0; return r===parseInt(c[10]);
+}
+
 function pgCadastroCliente(el){
   setTopbar('Novo Cliente','Cadastro rapido');
-  el.innerHTML='<div style="padding:1rem"><div class="form-group"><label class="req">Nome Completo</label><input type="text" id="nc-nome" autocomplete="name"></div><div class="form-2col"><div class="form-group"><label class="req">CPF</label><input type="text" id="nc-cpf" placeholder="000.000.000-00" inputmode="numeric" maxlength="14"></div><div class="form-group"><label class="req">Telefone</label><input type="tel" id="nc-tel" placeholder="(00) 00000-0000" maxlength="15"></div></div><div class="form-group"><label class="req">E-mail</label><input type="email" id="nc-email"></div><div class="form-section">Veiculo</div><div class="form-group"><label class="req">Placa</label><input type="text" id="nv-placa" placeholder="ABC-1234" style="text-transform:uppercase"></div><div class="form-2col"><div class="form-group"><label class="req">Marca</label><input type="text" id="nv-marca" placeholder="Toyota"></div><div class="form-group"><label class="req">Modelo</label><input type="text" id="nv-modelo" placeholder="Corolla"></div></div><div class="form-2col"><div class="form-group"><label class="req">Ano</label><input type="number" id="nv-ano" inputmode="numeric"></div><div class="form-group"><label class="req">Cor</label><input type="text" id="nv-cor"></div></div><div class="form-group"><label class="req">Combustivel</label><select id="nv-comb"><option value="">--</option>'+['Gasolina','Alcool','Flex','Diesel','GNV','Eletrico','Hibrido'].map(function(c){ return '<option>'+c+'</option>'; }).join('')+'</select></div><div class="form-group"><label>Quilometragem</label><input type="number" id="nv-km" inputmode="numeric"></div><button class="btn btn-primary btn-full btn-lg" id="btn-salvar-cli" onclick="salvarNovoCliente()">Cadastrar e Abrir OS</button><div style="height:.5rem"></div></div>';
+  el.innerHTML='<div style="padding:1rem"><div class="form-group"><label class="req">Nome Completo</label><input type="text" id="nc-nome" autocomplete="name" placeholder="Nome completo do cliente"></div><div class="form-2col"><div class="form-group"><label class="req">CPF</label><input type="text" id="nc-cpf" placeholder="000.000.000-00" inputmode="numeric" maxlength="14" oninput="maskCPF2(this)"></div><div class="form-group"><label class="req">Telefone / WA</label><input type="tel" id="nc-tel" placeholder="(41) 99999-9999" maxlength="15" oninput="maskTel2(this)"></div></div><div class="form-group"><label>E-mail</label><input type="email" id="nc-email" placeholder="email@exemplo.com"></div><div class="form-section">Veiculo</div><div class="form-group"><label class="req">Placa</label><input type="text" id="nv-placa" placeholder="ABC-1234" style="text-transform:uppercase"></div><div class="form-2col"><div class="form-group"><label class="req">Marca</label><input type="text" id="nv-marca" placeholder="Toyota"></div><div class="form-group"><label class="req">Modelo</label><input type="text" id="nv-modelo" placeholder="Corolla"></div></div><div class="form-2col"><div class="form-group"><label class="req">Ano</label><input type="number" id="nv-ano" inputmode="numeric"></div><div class="form-group"><label class="req">Cor</label><input type="text" id="nv-cor"></div></div><div class="form-group"><label class="req">Combustivel</label><select id="nv-comb"><option value="">--</option>'+['Gasolina','Alcool','Flex','Diesel','GNV','Eletrico','Hibrido'].map(function(c){ return '<option>'+c+'</option>'; }).join('')+'</select></div><div class="form-group"><label>Quilometragem</label><input type="number" id="nv-km" inputmode="numeric"></div><button class="btn btn-primary btn-full btn-lg" id="btn-salvar-cli" onclick="salvarNovoCliente()">Cadastrar e Abrir OS</button><div style="height:.5rem"></div></div>';
   document.getElementById('nc-cpf').addEventListener('input',function(){ this.value=maskCPF(this.value); });
   document.getElementById('nc-tel').addEventListener('input',function(){ this.value=maskPhone(this.value); });
 }
 
 function salvarNovoCliente(){
-  var nome=document.getElementById('nc-nome').value.trim(), cpf=document.getElementById('nc-cpf').value.trim(), tel=document.getElementById('nc-tel').value.trim(), email=document.getElementById('nc-email').value.trim(), placa=document.getElementById('nv-placa').value.toUpperCase().trim(), marca=document.getElementById('nv-marca').value.trim(), modelo=document.getElementById('nv-modelo').value.trim(), ano=parseInt(document.getElementById('nv-ano').value)||null, cor=document.getElementById('nv-cor').value.trim(), comb=document.getElementById('nv-comb').value;
-  if(!nome){ toast('Nome obrigatório','error'); return; }
-  if(!cpf){ toast('CPF obrigatório','error'); return; }
-  // Validar CPF
-  var cpfN=cpf.replace(/\D/g,'');
-  if(cpfN.length!==11){ toast('CPF inválido — 11 dígitos','error'); return; }
-  var invalidos=['00000000000','11111111111','22222222222','33333333333','44444444444','55555555555','66666666666','77777777777','88888888888','99999999999'];
-  if(invalidos.indexOf(cpfN)>=0){ toast('CPF inválido','error'); return; }
-  var s=0; for(var i=0;i<9;i++) s+=parseInt(cpfN[i])*(10-i); var r=11-(s%11); if(r>=10)r=0; if(r!==parseInt(cpfN[9])){ toast('CPF inválido','error'); return; }
-  s=0; for(var i=0;i<10;i++) s+=parseInt(cpfN[i])*(11-i); r=11-(s%11); if(r>=10)r=0; if(r!==parseInt(cpfN[10])){ toast('CPF inválido','error'); return; }
-  if(!tel){ toast('Telefone obrigatório','error'); return; }
-  if(!email){ toast('E-mail obrigatório','error'); return; }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('E-mail inválido','error'); return; }
-  if(!placa){ toast('Placa obrigatória','error'); return; }
-  if(!marca){ toast('Marca obrigatória','error'); return; }
-  if(!modelo){ toast('Modelo obrigatório','error'); return; }
-  if(!ano){ toast('Ano obrigatório','error'); return; }
-  if(!cor){ toast('Cor obrigatória','error'); return; }
-  if(!comb){ toast('Combustível obrigatório','error'); return; }
-  var btn=document.getElementById('btn-salvar-cli'); btn.textContent='Salvando...'; btn.disabled=true;
-  sb().from('clientes').insert({nome:nome,cpf:cpf,telefone:tel,email:email,status:'novo'}).select().single().then(function(rc){ if(rc.error){ toast('Erro: '+rc.error.message,'error'); btn.textContent='Cadastrar e Abrir OS'; btn.disabled=false; return; } var cli=rc.data; sb().from('veiculos').insert({cliente_id:cli.id,placa:placa,marca:marca,modelo:modelo,ano:ano,cor:cor,combustivel:comb,quilometragem:parseInt(document.getElementById('nv-km').value)||null}).select().single().then(function(rv){ if(rv.error){ toast('Erro: '+rv.error.message,'error'); btn.textContent='Cadastrar e Abrir OS'; btn.disabled=false; return; } toast('Cliente e veiculo cadastrados!'); selecionarVeiculo(cli.id,cli.nome,tel,cpf,rv.data.id,placa,(marca+' '+modelo).trim()); }); });
+  var btn=document.getElementById('btn-salvar-cli');
+  btn.disabled=true; btn.textContent='Verificando...';
+
+  var nome  = document.getElementById('nc-nome').value.trim();
+  var cpf   = document.getElementById('nc-cpf').value.trim();
+  var tel   = document.getElementById('nc-tel').value.trim();
+  var email = document.getElementById('nc-email').value.trim();
+  var placa = document.getElementById('nv-placa').value.toUpperCase().trim();
+  var marca = document.getElementById('nv-marca').value.trim();
+  var modelo= document.getElementById('nv-modelo').value.trim();
+  var ano   = parseInt(document.getElementById('nv-ano').value)||null;
+  var cor   = document.getElementById('nv-cor').value.trim();
+  var comb  = document.getElementById('nv-comb').value;
+
+  function erroCad(msg){ toast(msg,'error'); btn.textContent='Cadastrar e Abrir OS'; btn.disabled=false; }
+
+  if(!nome)               return erroCad('Nome é obrigatório.');
+  if(!validarCPF2(cpf))   return erroCad('CPF inválido. Verifique os dígitos.');
+  if(!tel)                return erroCad('Telefone é obrigatório.');
+  if(!placa)              return erroCad('Placa é obrigatória.');
+  if(!marca)              return erroCad('Marca é obrigatória.');
+  if(!modelo)             return erroCad('Modelo é obrigatório.');
+  if(!ano)                return erroCad('Ano é obrigatório.');
+  if(!comb)               return erroCad('Combustível é obrigatório.');
+
+  var cpfFmt = cpf.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+
+  // Verificar CPF duplicado
+  sb().from('clientes').select('id,nome').ilike('cpf','%'+cpfFmt+'%').limit(1).then(function(chk){
+    if(chk.data && chk.data.length>0){
+      erroCad('CPF já cadastrado para: '+chk.data[0].nome+'. Busque pelo CPF na tela inicial.');
+      return;
+    }
+    btn.textContent='Salvando...';
+    // Criar cliente
+    sb().from('clientes').insert({
+      nome:nome, cpf:cpfFmt, telefone:tel,
+      email:email||null, status:'novo'
+    }).select().single().then(function(rc){
+      if(rc.error){ erroCad('Erro: '+rc.error.message); return; }
+      var cli = rc.data;
+      // Criar veículo
+      sb().from('veiculos').insert({
+        cliente_id:cli.id, placa:placa, marca:marca,
+        modelo:modelo, ano:ano, cor:cor||null, combustivel:comb
+      }).select().single().then(function(rv){
+        if(rv.error){ erroCad('Erro no veículo: '+rv.error.message); return; }
+        toast('Cliente e veículo cadastrados!');
+        selecionarVeiculo(cli.id, cli.nome, tel, cpfFmt, rv.data.id, placa, (marca+' '+modelo).trim());
+      });
+    });
+  });
 }
 
 function abrirAddVeiculo(cliId,cliNome){ abrirModal('Novo Veiculo - '+cliNome,'<div class="form-group"><label class="req">Placa</label><input type="text" id="fv-placa" placeholder="ABC-1234" style="text-transform:uppercase;width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div><div class="form-2col"><div class="form-group"><label>Marca</label><input type="text" id="fv-marca" placeholder="Toyota" style="width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div><div class="form-group"><label>Modelo</label><input type="text" id="fv-modelo" placeholder="Corolla" style="width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div></div><div class="form-2col"><div class="form-group"><label>Ano</label><input type="number" id="fv-ano" style="width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div><div class="form-group"><label>Cor</label><input type="text" id="fv-cor" style="width:100%;padding:.72rem .9rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.95rem;font-family:inherit;outline:none"></div></div><div class="form-group"><label>Combustivel</label><select id="fv-comb" style="width:100%;padding:.65rem;border:1.5px solid var(--border);border-radius:.6rem;font-size:.9rem;font-family:inherit"><option value="">--</option>'+['Gasolina','Alcool','Flex','Diesel','GNV','Eletrico','Hibrido'].map(function(c){ return '<option>'+c+'</option>'; }).join('')+'</select></div>','<button class="btn btn-secondary btn-full" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary btn-full" onclick="salvarAddVeiculo(\''+esc(cliId)+'\',\''+esc(cliNome)+'\')">Salvar</button>'); }
