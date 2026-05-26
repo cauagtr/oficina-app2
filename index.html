@@ -368,19 +368,22 @@ function setTopbar(titulo, sub, acoes){
 
 
 function confirmar(msg, onSim, titulo) {
-  var overlay = document.createElement('div');
-  overlay.className = 'confirm-overlay';
-  overlay.innerHTML = '<div class="confirm-card">'+
-    '<div class="confirm-icon">⚠️</div>'+
-    '<div style="font-weight:800;font-size:.95rem;margin-bottom:.5rem">'+(titulo||'Confirmar ação')+'</div>'+
-    '<div class="confirm-msg">'+msg+'</div>'+
-    '<div class="confirm-btns">'+
-      '<button class="btn btn-secondary" style="flex:1" onclick="this.closest('.confirm-overlay').remove()">Cancelar</button>'+
-      '<button class="btn" style="flex:1;background:var(--red);color:#fff" id="conf-sim">Confirmar</button>'+
-    '</div>'+
-  '</div>';
-  document.body.appendChild(overlay);
-  overlay.querySelector('#conf-sim').onclick = function(){ overlay.remove(); onSim(); };
+  var el = document.createElement('div');
+  el.className = 'confirm-overlay';
+  el.id = 'cov';
+  el.innerHTML = [
+    '<div class="confirm-card">',
+    '<div class="confirm-icon">&#9888;</div>',
+    '<div style="font-weight:800;font-size:.95rem;margin-bottom:.5rem">' + (titulo||'Confirmar') + '</div>',
+    '<div class="confirm-msg">' + msg + '</div>',
+    '<div class="confirm-btns">',
+    '<button class="btn btn-secondary" style="flex:1" id="conf-cancel-btn">Cancelar</button>',
+    '<button class="btn" style="flex:1;background:var(--red);color:#fff" id="conf-ok-btn">Confirmar</button>',
+    '</div></div>'
+  ].join('');
+  document.body.appendChild(el);
+  document.getElementById('conf-cancel-btn').onclick = function(){ el.remove(); };
+  document.getElementById('conf-ok-btn').onclick = function(){ el.remove(); onSim(); };
 }
 
 var OS={};
@@ -645,7 +648,7 @@ function renderNovaOS3(el){
     '</div>'+
     '<button class="btn btn-primary btn-full btn-lg" style="margin-top:.85rem" onclick="avancar3()">Próximo — Confirmar</button>'+
   '</div>';
-  renderItensOS();<div id="itens-lista"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem"><button class="btn btn-blue btn-full" onclick="addItem(\'servico\')">+ Servico</button><button class="btn btn-purple btn-full" onclick="addItem(\'peca\')">+ Peca</button></div><div class="card card-pad" style="margin-bottom:1rem"><div class="total-row"><span style="color:var(--muted)">Servicos</span><strong id="sub-svc">R$ 0,00</strong></div><div class="total-row"><span style="color:var(--muted)">Pecas</span><strong id="sub-pec">R$ 0,00</strong></div><div style="display:flex;align-items:center;gap:.5rem;margin:.5rem 0"><span style="color:var(--muted);font-size:.82rem;white-space:nowrap">Desconto R$</span><input type="number" id="os-desconto" value="'+(OS.desconto||0)+'" min="0" step="0.01" style="flex:1;padding:.42rem .7rem;border:1.5px solid var(--border);border-radius:.5rem;font-size:.9rem;font-family:inherit" oninput="calcTotal()"></div><div class="total-row total-destaque"><span>Total Final</span><span id="total-final">R$ 0,00</span></div></div><button class="btn btn-primary btn-full btn-lg" onclick="avancar3()">Proximo &mdash; Confirmacao</button></div>';
+  renderItensOS();
   renderItens(); calcTotal();
 }
 function renderItens(){
