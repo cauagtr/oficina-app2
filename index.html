@@ -267,7 +267,7 @@ function abrirModal(titulo, corpo, rodape) {
 function fecharModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
 function fecharModalFora(e) { if(e.target.id==='modal-overlay') fecharModal(); }
 
-var _user = null, _funcId = null;
+var _user = null, _funcId = null, _funcNome = null, _funcPerfil = null;
 
 function doLogin() {
   var email=document.getElementById('auth-email').value.trim();
@@ -286,19 +286,41 @@ function doLogout() { sb().auth.signOut(); }
 
 sb().auth.onAuthStateChange(function(event, session){
   if(session){
-    _user=session.user;
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    sb().from('funcionarios').select('id,nome').eq('email',session.user.email).maybeSingle().then(function(res){
-      _funcId=res.data?res.data.id:null;
-      App.init();
-    });
+    _user = session.user;
+    // Verificar se é mecânico ou gestor (ambos podem usar o App 2)
+    sb().from('funcionarios').select('id,nome,cargo,perfil')
+      .eq('email', session.user.email).maybeSingle().then(function(res){
+        var func = res.data;
+        if(!func){
+          // Usuário não tem funcionário vinculado
+          sb().auth.signOut();
+          document.getElementById('auth-error').textContent = 'Usuário não encontrado no sistema.';
+          return;
+        }
+        if(func.perfil !== 'mecanico' && func.perfil !== 'gestor'){
+          // Perfil não autorizado
+          sb().auth.signOut();
+          document.getElementById('auth-error').textContent = 'Acesso negado. Contate o gestor.';
+          return;
+        }
+        _funcId = func.id;
+        _funcNome = func.nome;
+        _funcPerfil = func.perfil;
+        document.getElementById('auth-screen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        App.init();
+      });
   } else {
-    _user=null; _funcId=null;
+    _user=null; _funcId=null; _funcNome=null; _funcPerfil=null;
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
   }
 });
+
+function atualizarTopbarUser(){
+  var el = document.getElementById('topbar-user-nome');
+  if(el && _funcNome) el.textContent = _funcNome + (_funcPerfil==='gestor'?' (Gestor)':'');
+}
 
 function atualizarBadge() {
   sb().from('ordens_servico').select('id').in('status',['na_fila','em_manutencao','aguardando_peca','pronto_retirada']).then(function(res){
@@ -952,4 +974,3 @@ function salvarAddVeiculo(cliId,cliNome){ var placa=document.getElementById('fv-
 </script>
 </body>
 </html>
-
