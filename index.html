@@ -234,7 +234,18 @@ var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 var APP3_URL = 'https://oficina-app3.vercel.app';
 
 var _sb = null;
-function sb() { if (!_sb) _sb = supabase.createClient(SUPA_URL, SUPA_KEY); return _sb; }
+function sb() {
+  if (!_sb) _sb = supabase.createClient(SUPA_URL, SUPA_KEY, {
+    auth: {
+      persistSession: true,
+      storageKey: 'oficina-mec-auth',
+      storage: window.localStorage,
+      autoRefreshToken: true,
+      detectSessionInUrl: false
+    }
+  });
+  return _sb;
+}
 
 function brl(v) { return 'R$\u00a0' + Math.abs(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); }
 function hoje() { return new Date().toISOString().substring(0,10); }
