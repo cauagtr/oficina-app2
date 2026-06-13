@@ -295,21 +295,22 @@ function doLogin() {
 }
 function doLogout() { sb().auth.signOut(); }
 
+var _appIniciado = false;
 sb().auth.onAuthStateChange(function(event, session){
-  if(session){
+  if((event==='INITIAL_SESSION'||event==='SIGNED_IN') && session && !_appIniciado){
+    _appIniciado = true;
     _user = session.user;
-    // Verificar se é mecânico ou gestor (ambos podem usar o App 2)
     sb().from('funcionarios').select('id,nome,cargo,perfil')
       .eq('email', session.user.email).maybeSingle().then(function(res){
         var func = res.data;
         if(!func){
-          // Usuário não tem funcionário vinculado
+          _appIniciado = false;
           sb().auth.signOut();
           document.getElementById('auth-error').textContent = 'Usuário não encontrado no sistema.';
           return;
         }
         if(func.perfil !== 'mecanico' && func.perfil !== 'gestor'){
-          // Perfil não autorizado
+          _appIniciado = false;
           sb().auth.signOut();
           document.getElementById('auth-error').textContent = 'Acesso negado. Contate o gestor.';
           return;
@@ -321,7 +322,8 @@ sb().auth.onAuthStateChange(function(event, session){
         document.getElementById('app').classList.remove('hidden');
         App.init();
       });
-  } else {
+  } else if(event==='SIGNED_OUT'){
+    _appIniciado = false;
     _user=null; _funcId=null; _funcNome=null; _funcPerfil=null;
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
