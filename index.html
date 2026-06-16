@@ -119,6 +119,14 @@ body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: var(
 .alert-danger  { background: #fff1f2; color: #b91c1c;  border-color: var(--red); }
 .alert-success { background: #f0fdf4; color: #065f46;  border-color: var(--green); }
 .alert-info    { background: #eff6ff; color: #1d4ed8;  border-color: var(--blue); }
+.ag-hoje-wrap   { padding: .85rem 1rem 0; }
+.ag-hoje-title  { font-size: .72rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .5rem; }
+.ag-hoje-item   { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem .9rem; margin-bottom: .5rem; border-left: 3px solid var(--border); }
+.ag-hoje-item.pendente   { border-left-color: var(--amber); }
+.ag-hoje-item.confirmado { border-left-color: var(--green); }
+.ag-hoje-cli    { font-weight: 700; font-size: .9rem; }
+.ag-hoje-info   { font-size: .76rem; color: var(--muted); margin-top: .15rem; }
+.ag-hoje-foot   { display: flex; align-items: center; justify-content: space-between; margin-top: .55rem; }
 #toast { position: fixed; bottom: 74px; left: 1rem; right: 1rem; padding: .82rem 1.1rem; border-radius: .75rem; font-size: .88rem; font-weight: 700; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,.18); }
 #toast.success { background: #0f172a; color: #a7f3d0; border-left: 3px solid var(--green); }
 #toast.error   { background: #0f172a; color: #fca5a5; border-left: 3px solid var(--red); }
@@ -429,7 +437,40 @@ resetOS();
 var _bTimer;
 function pgBuscar(el){
   setTopbar('Oficina','Buscar cliente ou veiculo');
-  el.innerHTML='<div class="search-wrap"><div class="search-box"><span style="color:rgba(255,255,255,.45)">&#9675;</span><input type="text" id="busca-inp" placeholder="Nome, CPF ou placa..." autocomplete="off" oninput="onBusca(this.value)"></div></div><div id="busca-res"><div class="empty-state" style="color:var(--muted)"><div class="empty-icon">&#9675;</div><p style="font-size:.85rem">Digite o nome, CPF ou placa</p></div></div>';
+  el.innerHTML='<div class="ag-hoje-wrap" id="ag-hoje-wrap"></div><div class="search-wrap"><div class="search-box"><span style="color:rgba(255,255,255,.45)">&#9675;</span><input type="text" id="busca-inp" placeholder="Nome, CPF ou placa..." autocomplete="off" oninput="onBusca(this.value)"></div></div><div id="busca-res"><div class="empty-state" style="color:var(--muted)"><div class="empty-icon">&#9675;</div><p style="font-size:.85rem">Digite o nome, CPF ou placa</p></div></div>';
+  carregarAgendaHoje();
+}
+
+function carregarAgendaHoje(){
+  var wrap=document.getElementById('ag-hoje-wrap'); if(!wrap) return;
+  sb().from('agendamentos').select('*,clientes(nome,telefone),veiculos(placa,modelo,marca)')
+    .eq('data_desejada',hoje()).in('status',['pendente','confirmado']).order('hora_preferida')
+    .then(function(res){
+      wrap=document.getElementById('ag-hoje-wrap'); if(!wrap) return;
+      var lista=res.data||[];
+      if(!lista.length){ wrap.innerHTML=''; return; }
+      var horaLbl={manha:'Manhã',tarde:'Tarde',qualquer:'Qualquer horário'};
+      wrap.innerHTML='<div class="ag-hoje-title">Agendamentos de hoje ('+lista.length+')</div>'+
+        lista.map(function(e){
+          var cli=e.clientes||{}, vei=e.veiculos||{};
+          var info=[ [vei.placa,vei.modelo].filter(Boolean).join(' '), e.servico_nome, horaLbl[e.hora_preferida]||e.hora_preferida ].filter(Boolean).join(' · ');
+          var badge=e.status==='confirmado'?'<span class="badge b-pronto">Confirmado</span>':'<span class="badge b-aguard">Pendente</span>';
+          return '<div class="ag-hoje-item '+e.status+'">'+
+            '<div class="ag-hoje-cli">'+(cli.nome||'Cliente')+'</div>'+
+            '<div class="ag-hoje-info">'+info+'</div>'+
+            '<div class="ag-hoje-foot">'+badge+
+              '<button class="btn btn-success btn-sm" onclick="agHojeMarcarAtendido(\''+e.id+'\')">Marcar atendido</button>'+
+            '</div></div>';
+        }).join('');
+    });
+}
+
+function agHojeMarcarAtendido(id){
+  sb().from('agendamentos').update({status:'atendido'}).eq('id',id).then(function(res){
+    if(res.error){ toast('Erro: '+res.error.message,'error'); return; }
+    toast('Agendamento marcado como atendido!');
+    carregarAgendaHoje();
+  });
 }
 function onBusca(q){ clearTimeout(_bTimer); if(q.length<2) return; _bTimer=setTimeout(function(){ executarBusca(q); },400); }
 
